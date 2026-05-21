@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced System Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            background-color: #090d16; 
+            color: #f1f5f9; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            padding: 20px; 
+            box-sizing: border-box; 
+        }
+        h1 { color: #ffffff; margin-bottom: 5px; font-size: 26px; font-weight: 600; letter-spacing: 0.5px; }
+        p { color: #64748b; margin-top: 0; margin-bottom: 30px; font-size: 14px; }
+        
+        .container { 
+            width: 100%; 
+            max-width: 480px; 
+            background: #111827; 
+            padding: 25px; 
+            border-radius: 20px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5); 
+            border: 1px solid #1f2937;
+            box-sizing: border-box; 
+        }
+
+        .stat-card { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 16px 20px; 
+            margin-bottom: 16px; 
+            background: #1f2937; 
+            border-radius: 14px; 
+            transition: all 0.5s ease;
+            border-left: 5px solid #10b981;
+        }
+
+        .stat-info { display: flex; flex-direction: column; }
+        .stat-label { font-size: 13px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-value { font-size: 22px; font-weight: 700; color: #ffffff; margin-top: 4px; }
+        
+        .led-light {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: #10b981;
+            box-shadow: 0 0 12px #10b981;
+            transition: all 0.5s ease;
+        }
+
+        .card-healthy { border-left-color: #10b981 !important; }
+        .led-healthy { background-color: #10b981 !important; box-shadow: 0 0 12px #10b981 !important; }
+
+        .card-warning { border-left-color: #f59e0b !important; }
+        .led-warning { background-color: #f59e0b !important; box-shadow: 0 0 12px #f59e0b !important; }
+
+        .card-high { border-left-color: #ef4444 !important; background: rgba(239, 68, 68, 0.05) !important; }
+        .led-high { background-color: #ef4444 !important; box-shadow: 0 0 18px #ef4444, 0 0 30px #ef4444 !important; animation: blink 1s infinite; }
+
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        .chart-container { margin-top: 25px; position: relative; height: 180px; width: 100%; }
+    </style>
+</head>
+<body>
+
+    <h1>NOC Operations Center</h1>
+    <p>Live Hardware Matrix Dashboard</p>
+
+    <div class="container">
+        <div id="cpu-card" class="stat-card card-healthy">
+            <div class="stat-info">
+                <span class="stat-label">CPU Core Load</span>
+                <span id="cpu-value" class="stat-value">0%</span>
+            </div>
+            <div id="cpu-led" class="led-light led-healthy"></div>
+        </div>
+
+        <div id="ram-card" class="stat-card card-healthy">
+            <div class="stat-info">
+                <span class="stat-label">Memory (RAM) Matrix</span>
+                <span id="ram-value" class="stat-value">0%</span>
+            </div>
+            <div id="ram-led" class="led-light led-healthy"></div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="monitorChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('monitorChart').getContext('2d');
+        const monitorChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Array(15).fill(''),
+                datasets: [
+                    { label: 'CPU', data: Array(15).fill(0), borderColor: '#3b82f6', borderWidth: 2, tension: 0.3, fill: false, pointRadius: 0 },
+                    { label: 'RAM', data: Array(15).fill(0), borderColor: '#a855f7', borderWidth: 2, tension: 0.1, fill: false, pointRadius: 0 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100, grid: { color: '#1f2937' }, ticks: { color: '#64748b' } }, x: { display: false } }, plugins: { legend: { display: true, labels: { color: '#9ca3af', boxWidth: 12 } } } }
+        });
+
+        function updateCardStatus(cardId, ledId, value) {
+            const card = document.getElementById(cardId);
+            const led = document.getElementById(ledId);
+            card.className = "stat-card"; led.className = "led-light";
+            if (value >= 80) { card.classList.add("card-high"); led.classList.add("led-high"); }
+            else if (value >= 50) { card.classList.add("card-warning"); led.classList.add("led-warning"); }
+            else { card.classList.add("card-healthy"); led.classList.add("led-healthy"); }
+        }
+
+        function updateMetrics() {
+            let cpu = Math.floor(Math.random() * (40 - 10 + 1)) + 10; 
+            let ram = Math.floor(Math.random() * (70 - 50 + 1)) + 50;
+            if (Math.random() > 0.85) cpu = Math.floor(Math.random() * (98 - 82 + 1)) + 82;
+            if (Math.random() > 0.90) ram = Math.floor(Math.random() * (95 - 82 + 1)) + 82;
+            document.getElementById('cpu-value').innerText = cpu + '%';
+            document.getElementById('ram-value').innerText = ram + '%';
+            updateCardStatus('cpu-card', 'cpu-led', cpu);
+            updateCardStatus('ram-card', 'ram-led', ram);
+            monitorChart.data.datasets[0].data.shift(); monitorChart.data.datasets[0].data.push(cpu);
+            monitorChart.data.datasets[1].data.shift(); monitorChart.data.datasets[1].data.push(ram);
+            monitorChart.update();
+        }
+        setInterval(updateMetrics, 1500); updateMetrics();
+    </script>
+</body>
+</html>
